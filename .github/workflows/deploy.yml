@@ -1,0 +1,30 @@
+name: Deploy to Raspberry Pi
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.PI_HOST }}" > ~/.ssh/known_hosts
+
+      - name: Deploy to Raspberry Pi
+        run: |
+          ssh "${{ secrets.PI_USER }}"@"${{ secrets.PI_HOST }}" << 'EOF'
+            cd "${{ secrets.PI_PATH }}"
+            git pull origin production
+            git checkout production
+            docker-compose up -d --build
+          EOF
